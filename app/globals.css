@@ -1,0 +1,5 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; overflow: hidden; background: #0A1018; }
+.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+@keyframes ld { 0%,100%{opacity:1} 50%{opacity:.15} }
