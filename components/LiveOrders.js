@@ -193,7 +193,7 @@ export default function LiveOrders() {
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     (async () => {
       const results = await Promise.allSettled(CHANNELS.map(ch => {
-        let sel = 'shopify_id,name,total_price,created_at,financial_status,tags,customer_email';
+        let sel = 'shopify_id,name,total,created_at,financial_status,tags,customer_email';
         if (ch.regionField) sel += ','+ch.regionField;
         if (ch.id==='vending') sel += ',vms_name,vms_id';
         return supabase.from(ch.table).select(sel).gte('created_at', todayStart.toISOString()).order('created_at',{ascending:false}).limit(200);
@@ -205,7 +205,7 @@ export default function LiveOrders() {
       CHANNELS.forEach((ch,i) => {
         const data = (results[i].status==='fulfilled'&&results[i].value.data)||[];
         data.forEach(raw => {
-          const amount = parseFloat(raw.total_price||0); if (amount<=0) return;
+          const amount = parseFloat(raw.total||0); if (amount<=0) return;
           const items = (itemsByStore[ch.id]||{})[raw.shopify_id]||[];
           let prod;
           if (items.length > 0) { prod = items.map(it => { let t = it.title||'Product'; if(t.length>50) t=t.slice(0,47)+'...'; return t+(it.quantity>1?' x'+it.quantity:''); }).join(', '); }
@@ -229,7 +229,7 @@ export default function LiveOrders() {
       forceUpdate(n=>n+1);
     })();
     const channels = CHANNELS.map(ch => supabase.channel('rt_'+ch.table).on('postgres_changes',{event:'INSERT',schema:'public',table:ch.table},(payload)=>{
-      const raw=payload.new; const amount=parseFloat(raw.total_price||0); if(amount<=0)return;
+      const raw=payload.new; const amount=parseFloat(raw.total||0); if(amount<=0)return;
       let customer = cleanEmail(raw.customer_email);
       if (!customer && raw.vms_name) customer = raw.vms_name;
       processTx({ch,prod:raw.vms_name||raw.tags||'New Order',qty:1,amount,loc:(ch.regionField&&raw[ch.regionField])||ch.defaultRegion||'',customer,time:ts()});

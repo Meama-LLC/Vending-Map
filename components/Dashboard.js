@@ -89,7 +89,7 @@ export default function Dashboard() {
       // Fetch today's orders grouped by vms_id
       const { data: orders, error } = await supabase
         .from('vending_orders')
-        .select('vms_name, vms_id, total_price, created_at, financial_status')
+        .select('vms_name, vms_id, total, created_at, financial_status')
         .gte('created_at', todayStart.toISOString())
         .order('created_at', { ascending: false });
 
@@ -102,7 +102,7 @@ export default function Dashboard() {
         if (!vid) return;
         if (!agg[vid]) agg[vid] = { vms_name: o.vms_name, vms_id: vid, txCount: 0, revenue: 0, lastTx: o.created_at };
         agg[vid].txCount++;
-        agg[vid].revenue += parseFloat(o.total_price || 0) * 3;
+        agg[vid].revenue += parseFloat(o.total || 0) * 3;
         if (o.created_at > agg[vid].lastTx) agg[vid].lastTx = o.created_at;
       });
 
@@ -161,7 +161,7 @@ export default function Dashboard() {
       const recent = (orders || []).slice(0, 10).map(o => ({
         id: o.created_at + o.vms_id,
         name: o.vms_name || 'Unknown',
-        price: parseFloat(o.total_price || 0),
+        price: parseFloat(o.total || 0),
         time: new Date(o.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       }));
       setTxFeed(recent);
@@ -262,7 +262,7 @@ export default function Dashboard() {
         setTxFeed(prev => [{
           id: Date.now() + '' + o.vms_id,
           name: o.vms_name || 'Unknown',
-          price: parseFloat(o.total_price || 0),
+          price: parseFloat(o.total || 0),
           time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         }, ...prev].slice(0, 10));
         // Refresh data every 30 seconds rather than per-event for performance
