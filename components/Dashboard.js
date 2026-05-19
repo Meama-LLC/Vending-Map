@@ -65,9 +65,10 @@ export default function Dashboard() {
   const [clock, setClock] = useState('LIVE');
   const [stats, setStats] = useState({ active: 0, total: 0, txTotal: 0, revTotal: 0 });
   const [topSales, setTopSales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);   // true only until first data arrives
   const [scale, setScale] = useState(1);
   const scaleRef = useRef(1);
+  const CACHE_KEY = 'meama_pulse_v1';
 
   // ── DETECT SCREEN SIZE ───────────────────────
   useEffect(() => {
@@ -79,21 +80,48 @@ export default function Dashboard() {
 
   const V = scale;
 
-  // ── LOAD DATA FROM SUPABASE ────────────────
+  // ── HYDRATE FROM CACHE (instant, no loading flash) ──
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (cached?.droppers?.length > 0) {
+        setDroppers(cached.droppers);
+        setStats(cached.stats);
+        setTopSales(cached.topSales);
+        setTxFeed(cached.txFeed);
+        setLoading(false);   // hide overlay immediately; fresh fetch runs in background
+      }
+    } catch (_) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── LOAD DATA (Shopify → Supabase fallback) ─
   const loadData = useCallback(async () => {
     try {
-      // Get today's date range
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
 
-      // Fetch today's orders grouped by vms_id
-      const { data: orders, error } = await supabase
-        .from('vending_orders')
-        .select('vms_name, vms_id, total, created_at, financial_status')
-        .gte('created_at', todayStart.toISOString())
-        .order('created_at', { ascending: false });
+      let orders = null;
 
-      if (error) { console.error('Supabase error:', error); return; }
+      // ── 1. Try Shopify API first ─────────────
+      try {
+        const res = await fetch('/api/shopify/orders');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.orders) { orders = json.orders; }
+        }
+      } catch (_) { /* fall through to Supabase */ }
+
+      // ── 2. Fall back to Supabase ─────────────
+      if (!orders) {
+        const { data, error } = await supabase
+          .from('vending_orders')
+          .select('vms_name, vms_id, total, created_at, financial_status')
+          .gte('created_at', todayStart.toISOString())
+          .order('created_at', { ascending: false });
+        if (error) { console.error('Supabase error:', error); return; }
+        orders = data;
+      }
 
       // Aggregate by vms_id
       const agg = {};
@@ -144,18 +172,14 @@ export default function Dashboard() {
         };
       });
 
-      setDroppers(drList);
-      if (!selected && drList.length > 0) setSelected(drList[0].id);
-
       // Stats
       const active = drList.filter(d => d.status === 'active').length;
       const txTotal = drList.reduce((s, d) => s + d.txToday, 0);
       const revTotal = drList.reduce((s, d) => s + d.revToday, 0);
-      setStats({ active, total: drList.length, txTotal, revTotal });
+      const newStats = { active, total: drList.length, txTotal, revTotal };
 
       // Top sales
       const sorted = [...drList].filter(d => d.txToday > 0).sort((a, b) => b.revToday - a.revToday).slice(0, 8);
-      setTopSales(sorted);
 
       // Recent transactions for feed
       const recent = (orders || []).slice(0, 10).map(o => ({
@@ -164,9 +188,21 @@ export default function Dashboard() {
         price: parseFloat(o.total || 0),
         time: new Date(o.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       }));
-      setTxFeed(recent);
 
+      // Update state (silently if cache already populated the UI)
+      setDroppers(drList);
+      if (!selected && drList.length > 0) setSelected(drList[0].id);
+      setStats(newStats);
+      setTopSales(sorted);
+      setTxFeed(recent);
       setLoading(false);
+
+      // Persist to cache so next page load is instant
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          droppers: drList, stats: newStats, topSales: sorted, txFeed: recent, cachedAt: Date.now(),
+        }));
+      } catch (_) {}
     } catch (err) {
       console.error('Load error:', err);
       setLoading(false);
