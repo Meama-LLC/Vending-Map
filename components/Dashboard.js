@@ -511,7 +511,7 @@ function getStyles(V) { return {
   tsRev: { fontFamily: 'Bebas Neue,system-ui', fontSize: 18*V, color: '#60A5FA', flexShrink: 0 },
 
   mapWrap: { gridColumn: 1, gridRow: 3, position: 'relative', overflow: 'hidden', background: '#0d0515' },
-  map: { width: '100%', height: '100%', zIndex: 1, filter: 'brightness(2.2) contrast(1.5) saturate(1.8) hue-rotate(260deg) brightness(0.6)' },
+  map: { width: '100%', height: '100%', zIndex: 1, filter: 'brightness(2.2) contrast(1.8) saturate(1.4) hue-rotate(245deg) brightness(0.88)' },
   rippleCanvas: { position: 'absolute', inset: 0, zIndex: 499, pointerEvents: 'none' },
   mapVig: { position: 'absolute', inset: 0, zIndex: 500, pointerEvents: 'none', background: 'radial-gradient(ellipse 120% 120% at 50% 50%,transparent 60%,rgba(12,6,20,.25) 100%)' },
   mc: { position: 'absolute', zIndex: 501, pointerEvents: 'none', width: 20*V, height: 20*V },
