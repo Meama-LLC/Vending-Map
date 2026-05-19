@@ -191,7 +191,11 @@ export default function Dashboard() {
 
       // Update state (silently if cache already populated the UI)
       setDroppers(drList);
-      if (!selected && drList.length > 0) setSelected(drList[0].id);
+      // Default selection = top dropper by revenue today
+      if (!selected && drList.length > 0) {
+        const top = [...drList].sort((a, b) => b.revToday - a.revToday)[0];
+        setSelected(top.id);
+      }
       setStats(newStats);
       setTopSales(sorted);
       setTxFeed(recent);
