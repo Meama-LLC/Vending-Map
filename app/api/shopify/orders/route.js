@@ -25,7 +25,15 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ orders: normalised, source: 'shopify', count: normalised.length });
+    // Include a sample raw order so we can verify tag/field structure
+    const sample = orders[0] ? {
+      id: orders[0].id, name: orders[0].name,
+      tags: orders[0].tags,
+      note_attributes: orders[0].note_attributes,
+      total_price: orders[0].total_price,
+    } : null;
+
+    return NextResponse.json({ orders: normalised, source: 'shopify', count: normalised.length, _sample: sample });
   } catch (err) {
     console.error('[shopify/orders]', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
