@@ -1,5 +1,17 @@
 import { NextResponse } from 'next/server';
 import { fetchVendingOrders } from '../../../../lib/shopify';
+import DROPPER_LOCATIONS from '../../.././../lib/droppers';
+
+// Build a reverse lookup: normalised name → vms_id
+// Shopify order `tags` == dropper `name` (lowercase, no spaces)
+const nameToId = {};
+Object.entries(DROPPER_LOCATIONS).forEach(([id, loc]) => {
+  if (loc.name) nameToId[norm(loc.name)] = id;
+});
+
+function norm(s) {
+  return (s || '').toLowerCase().replace(/\s+/g, '').trim();
+}
 
 export async function GET() {
   try {
@@ -8,11 +20,11 @@ export async function GET() {
 
     const orders = await fetchVendingOrders(todayStart);
 
-    // Normalise to the same shape Dashboard.js expects
     const normalised = orders.map(o => {
-      const attrs     = o.note_attributes || [];
-      const vmsId     = attrs.find(a => a.name === 'vms_id')?.value   || extractVmsId(o.tags);
-      const vmsName   = attrs.find(a => a.name === 'vms_name')?.value || extractVmsName(o.tags);
+      const tag    = (o.tags || '').split(',')[0].trim(); // first tag = machine name
+      const vmsId  = nameToId[norm(tag)] || null;
+      const vmsLoc = vmsId ? DROPPER_LOCATIONS[vmsId] : null;
+
       return {
         shopify_id:       String(o.id),
         name:             o.name,
@@ -21,32 +33,13 @@ export async function GET() {
         financial_status: o.financial_status,
         tags:             o.tags,
         vms_id:           vmsId,
-        vms_name:         vmsName,
+        vms_name:         vmsLoc?.name || tag || null,
       };
     });
 
-    // Include a sample raw order so we can verify tag/field structure
-    const sample = orders[0] ? {
-      id: orders[0].id, name: orders[0].name,
-      tags: orders[0].tags,
-      note_attributes: orders[0].note_attributes,
-      total_price: orders[0].total_price,
-    } : null;
-
-    return NextResponse.json({ orders: normalised, source: 'shopify', count: normalised.length, _sample: sample });
+    return NextResponse.json({ orders: normalised, source: 'shopify', count: normalised.length });
   } catch (err) {
     console.error('[shopify/orders]', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
-
-// ── Tag parsers ────────────────────────────────────────────────────────────
-// Expected tag format: "vending, vms_id:VM042, vms_name:Rustaveli Mall"
-function extractVmsId(tags = '') {
-  const m = tags.match(/vms[_-]?id[:\s]+([^\s,]+)/i);
-  return m ? m[1] : null;
-}
-function extractVmsName(tags = '') {
-  const m = tags.match(/vms[_-]?name[:\s]+([^,]+)/i);
-  return m ? m[1].trim() : null;
 }
