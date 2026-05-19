@@ -253,26 +253,7 @@ export default function Dashboard() {
         markersRef.current[d.id].setIcon(mkIcon(d.status));
       } else {
         const m = L.marker([d.lat, d.lng], { icon: mkIcon(d.status) }).addTo(map);
-        m.bindPopup(() => {
-          const s = SC[d.status];
-          const S = scaleRef.current;
-          const avg = Math.round(d.cyls.reduce((a, c) => a + c.pct, 0) / 6);
-          return `<div style="font-family:'DM Sans',system-ui">
-            <div style="display:flex;gap:${9*S}px;align-items:center;margin-bottom:${9*S}px">
-              <div style="width:${32*S}px;height:${32*S}px;border-radius:${8*S}px;background:${s.color}12;border:1px solid ${s.color}25;display:flex;align-items:center;justify-content:center;font-size:${15*S}px">☕</div>
-              <div><div style="font-size:${14*S}px;font-weight:700;color:rgba(255,255,255,.9)">${d.name}</div>
-              <div style="font-size:${10*S}px;color:rgba(255,255,255,.3);margin-top:1px">${d.addr}</div></div>
-            </div>
-            <div style="display:inline-block;font-size:${9*S}px;padding:${2*S}px ${7*S}px;border-radius:${4*S}px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:${s.color}15;color:${s.color};border:1px solid ${s.color}35;margin-bottom:${8*S}px">${d.label}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:${4*S}px">
-              ${[['Tx Today', d.txToday], ['Revenue', d.revToday.toFixed(0) + '₾'], ['Avg Fill', avg + '%']].map(([l, v]) =>
-                `<div style="background:rgba(255,255,255,.04);border-radius:${5*S}px;padding:${5*S}px ${6*S}px">
-                  <div style="font-family:Bebas Neue,system-ui;font-size:${16*S}px;color:#60A5FA;line-height:1">${v}</div>
-                  <div style="color:rgba(255,255,255,.22);font-size:${8*S}px;text-transform:uppercase;letter-spacing:.5px;margin-top:1px">${l}</div>
-                </div>`).join('')}
-            </div>
-          </div>`;
-        }, { maxWidth: 240, minWidth: 210 });
+        // No popup — the right panel handles all dropper details on click
         m.on('click', () => setSelected(d.id));
         markersRef.current[d.id] = m;
       }
