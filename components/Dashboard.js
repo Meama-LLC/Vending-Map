@@ -172,10 +172,10 @@ export default function Dashboard() {
         };
       });
 
-      // Stats
+      // Stats — include ALL orders (even from machines not on the map)
       const active = drList.filter(d => d.status === 'active').length;
-      const txTotal = drList.reduce((s, d) => s + d.txToday, 0);
-      const revTotal = drList.reduce((s, d) => s + d.revToday, 0);
+      const txTotal = (orders || []).length;
+      const revTotal = (orders || []).reduce((s, o) => s + parseFloat(o.total || 0), 0);
       const newStats = { active, total: drList.length, txTotal, revTotal };
 
       // Top sales
@@ -183,8 +183,8 @@ export default function Dashboard() {
 
       // Recent transactions for feed
       const recent = (orders || []).slice(0, 10).map(o => ({
-        id: o.created_at + o.vms_id,
-        name: o.vms_name || 'Unknown',
+        id: o.created_at + (o.vms_id || o.shopify_id || Math.random()),
+        name: o.vms_name || o.tags || 'Unknown',
         price: parseFloat(o.total || 0),
         time: new Date(o.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       }));

@@ -22,8 +22,8 @@ export async function GET() {
 
     const normalised = orders.map(o => {
       const tag    = (o.tags || '').split(',')[0].trim(); // first tag = machine name
-      const vmsId  = nameToId[norm(tag)] || null;
-      const vmsLoc = vmsId ? DROPPER_LOCATIONS[vmsId] : null;
+      const vmsId  = nameToId[norm(tag)] || tag || null; // fallback: use tag itself as id
+      const vmsLoc = DROPPER_LOCATIONS[vmsId] || null;
 
       return {
         shopify_id:       String(o.id),
